@@ -11,7 +11,7 @@ const FOV_ANGLE = 60 * (Math.PI / 180);
 const WALL_STRIP_WIDTH = 1;
 const NUM_RAYS = WINDOW_WIDTH / WALL_STRIP_WIDTH;
 
-const MINIMAP_SCALE_FACTOR = 0.2;
+const MINIMAP_SCALE_FACTOR = 0.25;
 
 class Map
 {
@@ -67,7 +67,7 @@ class Player
 	{
 		this.x = WINDOW_WIDTH / 2;
 		this.y = WINDOW_HEIGHT / 2;
-		this.radius = 20;
+		this.radius = 10;
 		this.turnDirection = 0; // -1 if left, 1 if right
 		this.walkDirection = 0; // -1 if back, 1 if front
 		this.rotationAngle = Math.PI / 2;
@@ -125,7 +125,7 @@ class Ray
 		this.isRayFacingRight = this.rayAngle < (0.5 * Math.PI) || this.rayAngle > (1.5 * Math.PI);
 		this.isRayFacingLeft = !this.isRayFacingRight;
 	}
-	cast(columnId)
+	cast()
 	{
 		var xintercept, yintercept;
 		var xstep, ystep;
@@ -151,11 +151,11 @@ class Ray
         var nextHorzTouchX = xintercept;
         var nextHorzTouchY = yintercept;
 
-        if (this.isRayFacingUp)
-            nextHorzTouchY--;
+        //if (this.isRayFacingUp)
+        //    nextHorzTouchY--;
 
         while (nextHorzTouchX >= 0 && nextHorzTouchX <= WINDOW_WIDTH && nextHorzTouchY >= 0 && nextHorzTouchY <= WINDOW_HEIGHT) {
-            if (grid.hasWallAt(nextHorzTouchX, nextHorzTouchY)) {
+            if (grid.hasWallAt(nextHorzTouchX, nextHorzTouchY - this.isRayFacingUp)) {
                 foundHorzWallHit = true;
                 horzWallHitX = nextHorzTouchX;
                 horzWallHitY = nextHorzTouchY;
@@ -186,11 +186,11 @@ class Ray
         var nextVertTouchX = xintercept;
         var nextVertTouchY = yintercept;
 
-        if (this.isRayFacingLeft)
-            nextVertTouchX--;
+        //if (this.isRayFacingLeft)
+        //    nextVertTouchX--;
 
         while (nextVertTouchX >= 0 && nextVertTouchX <= WINDOW_WIDTH && nextVertTouchY >= 0 && nextVertTouchY <= WINDOW_HEIGHT) {
-            if (grid.hasWallAt(nextVertTouchX, nextVertTouchY)) {
+            if (grid.hasWallAt(nextVertTouchX - this.isRayFacingLeft, nextVertTouchY)) {
                 foundVertWallHit = true;
                 vertWallHitX = nextVertTouchX;
                 vertWallHitY = nextVertTouchY;
@@ -268,20 +268,17 @@ function keyReleased()
 
 function castAllRays()
 {
-	var columnId = 0;
-
 	var rayAngle = player.rotationAngle - (FOV_ANGLE / 2);
 
 	rays = [];
 
-	for (var i = 0; i < NUM_RAYS; i++)
+	for (var col = 0; col < NUM_RAYS; col++)
 	{
 		var ray = new Ray(rayAngle);
-		ray.cast(columnId);
+		ray.cast();
 		rays.push(ray);
 
 		rayAngle += FOV_ANGLE / NUM_RAYS;
-		columnId++;
 	}
 }
 
@@ -308,13 +305,13 @@ function render3DProjectedWalls()
 		
 		var correctWallDist = ray.distance * Math.cos(player.rotationAngle - ray.rayAngle);
 		var alpha = 150 / Math.floor(correctWallDist);
+		var color = ray.wasHitVert ? 255: 150;
 
-//		console.log(Math.floor(correctWallDist));
 		var distProjectionPlane = (WINDOW_WIDTH / 2) * Math.tan(FOV_ANGLE / 2);
 
 		var wallStripHeight = (TILE_SIZE / correctWallDist) * distProjectionPlane;
 
-		fill(`rgba(255, 255, 255, ${alpha})`);
+		fill(`rgba(${color}, ${color}, ${color}, ${alpha})`);
 		noStroke();
 		rect(
 			i * WALL_STRIP_WIDTH,
