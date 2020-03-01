@@ -1,4 +1,4 @@
-const TILE_SIZE = 32;
+const TILE_SIZE = 64;
 const MAP_NUM_ROWS = 11;
 const MAP_NUM_COLS = 17;
 
@@ -10,6 +10,8 @@ const FOV_ANGLE = 60 * (Math.PI / 180);
 
 const WALL_STRIP_WIDTH = 1;
 const NUM_RAYS = WINDOW_WIDTH / WALL_STRIP_WIDTH;
+
+const MINIMAP_SCALE_FACTOR = 0.2;
 
 class Map
 {
@@ -48,7 +50,12 @@ class Map
 				var tileColor = this.grid[i][j] == 1 ? "#222": "#fff";
 				stroke("#222");
 				fill(tileColor);
-				rect(tileX, tileY, TILE_SIZE, TILE_SIZE);
+				rect(
+					MINIMAP_SCALE_FACTOR * tileX,
+					MINIMAP_SCALE_FACTOR * tileY,
+					MINIMAP_SCALE_FACTOR * TILE_SIZE,
+					MINIMAP_SCALE_FACTOR * TILE_SIZE
+				);
 			}
 		}
 	}
@@ -60,7 +67,7 @@ class Player
 	{
 		this.x = WINDOW_WIDTH / 2;
 		this.y = WINDOW_HEIGHT / 2;
-		this.radius = 3;
+		this.radius = 20;
 		this.turnDirection = 0; // -1 if left, 1 if right
 		this.walkDirection = 0; // -1 if back, 1 if front
 		this.rotationAngle = Math.PI / 2;
@@ -87,8 +94,12 @@ class Player
 	render()
 	{
 		noStroke();
-		fill("red");
-		circle(this.x, this.y, this.radius);
+		fill("blue");
+		circle(
+			MINIMAP_SCALE_FACTOR * this.x,
+			MINIMAP_SCALE_FACTOR * this.y,
+			MINIMAP_SCALE_FACTOR * this.radius
+		);
 		/*stroke("red");
 		line(
 			this.x,
@@ -203,10 +214,10 @@ class Ray
 	{
 		stroke("rgba(255, 0, 0, 0.3)");
 		line(
-			player.x,
-			player.y,
-			this.wallHitX,
-			this.wallHitY
+			MINIMAP_SCALE_FACTOR * player.x,
+			MINIMAP_SCALE_FACTOR * player.y,
+			MINIMAP_SCALE_FACTOR * this.wallHitX,
+			MINIMAP_SCALE_FACTOR * this.wallHitY
 		);
 	}
 }
@@ -289,6 +300,31 @@ function distBetweenPoints(x1, y1, x2, y2)
 	    return Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
 }
 
+function render3DProjectedWalls()
+{
+	for (var i = 0; i < NUM_RAYS; i++)
+	{
+		var ray = rays[i];
+		
+		var correctWallDist = ray.distance * Math.cos(player.rotationAngle - ray.rayAngle);
+		var alpha = 150 / Math.floor(correctWallDist);
+
+//		console.log(Math.floor(correctWallDist));
+		var distProjectionPlane = (WINDOW_WIDTH / 2) * Math.tan(FOV_ANGLE / 2);
+
+		var wallStripHeight = (TILE_SIZE / correctWallDist) * distProjectionPlane;
+
+		fill(`rgba(255, 255, 255, ${alpha})`);
+		noStroke();
+		rect(
+			i * WALL_STRIP_WIDTH,
+			(WINDOW_HEIGHT / 2) - (wallStripHeight / 2),
+			WALL_STRIP_WIDTH,
+			wallStripHeight
+		);
+	}
+}
+
 function setup()
 {
 	// TODO: initializar todos os objetos
@@ -305,7 +341,11 @@ function update()
 function draw()
 {
 	// TODO: renderizar todos os objetos frame a frame
+	clear("#212121");
+
 	update();
+
+	render3DProjectedWalls();
 
 	grid.render();
 	for (ray of rays)
